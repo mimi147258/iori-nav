@@ -186,7 +186,7 @@ export async function onRequest(context) {
   const submissionClass = submissionEnabled ? '' : 'hidden';
 
   const siteName = env.SITE_NAME || '灰色轨迹';
-  const siteDescription = env.SITE_DESCRIPTION || '从效率工具到灵感站点,我们亲自挑选、亲手标注,只为帮助你更快找到值得信赖的优质资源。';
+  const siteDescription = env.SITE_DESCRIPTION || '一个优雅、快速、易于部署的书签（网址）收藏与分享平台，完全基于 Cloudflare 全家桶构建';
   const footerText = env.FOOTER_TEXT || '曾梦想仗剑走天涯';
 
   // 5. 读取 HTML 模板并替换占位符

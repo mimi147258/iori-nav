@@ -1077,6 +1077,25 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let shouldStopBulkGeneration = false;
+  let aiRequestDelay = 1500; // Default value, will be updated from config
+
+  async function fetchPublicConfig() {
+    try {
+      const response = await fetch('/api/public-config');
+      if (!response.ok) {
+        console.error('Failed to fetch public config, using default values.');
+        return;
+      }
+      const config = await response.json();
+      if (config && typeof config.aiRequestDelay === 'number') {
+        aiRequestDelay = config.aiRequestDelay;
+        console.log(`AI request delay set to: ${aiRequestDelay}ms`);
+      }
+    } catch (error) {
+      console.error('Error fetching public config:', error);
+    }
+  }
+  fetchPublicConfig();
 
   // --- Event Listeners ---
 
@@ -1287,7 +1306,8 @@ document.addEventListener('DOMContentLoaded', () => {
       progressBar.style.width = `${((i + 1) / total) * 100}%`;
 
       if (i < total - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('Waiting for next request...:', aiRequestDelay);
+        await new Promise(resolve => setTimeout(resolve, aiRequestDelay));
       }
     }
 

@@ -184,6 +184,25 @@ th {
   background-color: #f2f2f2;
   font-weight: 600;
 }
+
+/* 设置书签列表的列宽 */
+#configTable th:nth-child(1) { width: 5%; } /* ID */
+#configTable th:nth-child(2) { width: 15%; } /* Name */
+#configTable th:nth-child(3) { width: 30%; } /* URL */
+#configTable th:nth-child(4) { width: 5%; }  /* Logo */
+#configTable th:nth-child(5) { width: 20%; } /* Description */
+#configTable th:nth-child(6) { width: 10%; } /* Catelog */
+#configTable th:nth-child(7) { width: 5%; }  /* 排序 */
+#configTable th:nth-child(8) { width: 10%; } /* Actions */
+
+/* 设置待审核列表的列宽 */
+#pendingTable th:nth-child(1) { width: 5%; } /* ID */
+#pendingTable th:nth-child(2) { width: 15%; } /* Name */
+#pendingTable th:nth-child(3) { width: 35%; } /* URL */
+#pendingTable th:nth-child(4) { width: 5%; }  /* Logo */
+#pendingTable th:nth-child(5) { width: 20%; } /* Description */
+#pendingTable th:nth-child(6) { width: 10%; } /* Catelog */
+#pendingTable th:nth-child(7) { width: 10%; } /* Actions */
 tr:nth-child(even) {
   background-color: #f9f9f9;
 }
