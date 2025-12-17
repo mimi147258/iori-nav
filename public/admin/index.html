@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>书签管理页面</title>
     <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/admin.css?v=4" />
+    <link rel="stylesheet" href="/css/admin.css?v=5" />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap"
       rel="stylesheet"
@@ -77,7 +77,7 @@
             <button id="exportBtn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors">导出</button>
             <button id="addCategoryBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">新增分类</button>
             <button id="addBookmarkBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">新增书签</button>
-            <button id="aiSettingsBtn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors">AI 设置</button>
+            <button id="settingsBtn" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors">设置</button>
         </div>
       </div>
 
@@ -205,68 +205,202 @@
           </form>
         </div>
       </div>
-      <!-- AI 设置模态框 -->
-      <div id="aiSettingsModal" class="modal settings-modal" style="display: none;">
+      <!-- 设置模态框 -->
+      <div id="settingsModal" class="modal settings-modal" style="display: none;">
         <div class="modal-content-wrapper">
           <div class="modal-header">
-            <h3 class="modal-title"><span>🤖</span> AI 设置</h3>
-            <button id="closeAiSettingsModal" class="modal-close-btn">×</button>
+            <h3 class="modal-title"><span>⚙️</span> 系统设置</h3>
+            <button id="closeSettingsModal" class="modal-close-btn">×</button>
           </div>
 
           <div class="modal-body">
+            <div class="settings-tabs">
+                <button class="settings-tab-btn active" data-tab="layout-settings">布局设置</button>
+                <button class="settings-tab-btn" data-tab="wallpaper-settings">壁纸设置</button>
+                <button class="settings-tab-btn" data-tab="ai-settings">AI 设置</button>
+            </div>
+
+            <!-- 布局设置内容 -->
+            <div id="layout-settings" class="settings-tab-content active">
+                <div class="form-group-stack" style="margin-top: 1rem;">
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="hideDescSwitch" class="cursor-pointer select-none text-gray-700 font-medium">隐藏描述</label>
+                        <label class="switch">
+                            <input type="checkbox" id="hideDescSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，前台卡片将不再显示网站描述信息。</p>
+
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="hideLinksSwitch" class="cursor-pointer select-none text-gray-700 font-medium">隐藏链接行</label>
+                        <label class="switch">
+                            <input type="checkbox" id="hideLinksSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，前台卡片将不再显示底部的链接地址和ID信息。</p>
+
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="hideCategorySwitch" class="cursor-pointer select-none text-gray-700 font-medium">隐藏分类</label>
+                        <label class="switch">
+                            <input type="checkbox" id="hideCategorySwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，前台卡片将不再显示分类标签。</p>
+
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="hideTitleSwitch" class="cursor-pointer select-none text-gray-700 font-medium">隐藏主标题</label>
+                        <label class="switch">
+                            <input type="checkbox" id="hideTitleSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，首页将不再显示主标题。</p>
+
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="hideSubtitleSwitch" class="cursor-pointer select-none text-gray-700 font-medium">隐藏副标题</label>
+                        <label class="switch">
+                            <input type="checkbox" id="hideSubtitleSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，首页将不再显示副标题（一言/描述）。</p>
+
+                    <div class="p-2 hover:bg-gray-50 rounded">
+                         <label class="block text-gray-700 font-medium mb-2">菜单布局</label>
+                         <div class="flex gap-4">
+                             <label class="inline-flex items-center cursor-pointer">
+                                 <input type="radio" name="menuLayout" value="vertical" class="form-radio text-primary-600">
+                                 <span class="ml-2">竖向 (默认)</span>
+                             </label>
+                             <label class="inline-flex items-center cursor-pointer">
+                                 <input type="radio" name="menuLayout" value="horizontal" class="form-radio text-primary-600">
+                                 <span class="ml-2">横向</span>
+                             </label>
+                         </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">选择横向时，左侧菜单隐藏，搜索框和分类导航显示在顶部区域。</p>
+
+                    <div class="p-2 hover:bg-gray-50 rounded">
+                         <label class="block text-gray-700 font-medium mb-2">卡片布局 (大屏一行显示)</label>
+                         <div class="flex gap-4">
+                             <label class="inline-flex items-center cursor-pointer">
+                                 <input type="radio" name="gridCols" value="4" class="form-radio text-primary-600">
+                                 <span class="ml-2">4 列</span>
+                             </label>
+                             <label class="inline-flex items-center cursor-pointer">
+                                 <input type="radio" name="gridCols" value="5" class="form-radio text-primary-600">
+                                 <span class="ml-2">5 列</span>
+                             </label>
+                         </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">设置在大屏幕设备上每行显示的卡片数量。</p>
+                </div>
+            </div>
+
+            <!-- 壁纸设置内容 -->
+            <div id="wallpaper-settings" class="settings-tab-content">
+                <div class="form-group-stack" style="margin-top: 1rem;">
+                    <div class="p-2 hover:bg-gray-50 rounded">
+                        <label for="customWallpaperInput" class="block text-gray-700 font-medium mb-2">自定义壁纸 (URL)</label>
+                        <input type="text" id="customWallpaperInput" placeholder="https://example.com/wallpaper.jpg" class="form-input w-full">
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">设置首页背景图片URL，留空则使用默认背景。</p>
+
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <label for="randomWallpaperSwitch" class="cursor-pointer select-none text-gray-700 font-medium">壁纸轮询 (顺序切换)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="randomWallpaperSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-2">开启后，每次刷新首页将按顺序轮流显示下方 API 获取的 7 张壁纸。</p>
+
+                    <div class="p-2 rounded bg-gray-50 border border-gray-100 mt-4">
+                         <div class="flex items-center justify-between mb-2">
+                             <label class="block text-gray-700 font-medium">Bing 在线壁纸 (点击应用)</label>
+                             <select id="bingCountry" class="text-sm border-gray-300 rounded shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+                                 <option value="">默认 (Global)</option>
+                                 <option value="spotlight">Spotlight (Windows 聚焦)</option>
+                                 <option value="cn">中国 (CN)</option>
+                                 <option value="us">美国 (US)</option>
+                                 <option value="jp">日本 (JP)</option>
+                                 <option value="au">澳大利亚 (AU)</option>
+                                 <option value="br">巴西 (BR)</option>
+                                 <option value="ca">加拿大 (CA)</option>
+                                 <option value="de">德国 (DE)</option>
+                                 <option value="fr">法国 (FR)</option>
+                                 <option value="gb">英国 (GB)</option>
+                                 <option value="in">印度 (IN)</option>
+                                 <option value="it">意大利 (IT)</option>
+                                 <option value="es">西班牙 (ES)</option>
+                             </select>
+                         </div>
+                         <div id="bingWallpapers" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3 min-h-[100px]">
+                             <!-- Wallpapers will be rendered here -->
+                             <div class="col-span-full text-center text-gray-400 py-8 text-sm">加载中...</div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- AI 设置内容 -->
-            <div>
-              <label class="form-label" for="providerSelector">API 提供商</label>
-              <select id="providerSelector" class="form-input" style="margin-bottom: 1rem;">
-                <option value="workers-ai">Cloudflare Workers AI (推荐)</option>
-                <option value="gemini">Google Gemini</option>
-                <option value="openai">OpenAI 兼容</option>
-              </select>
-            </div>
-
-            <div class="form-group-stack">
-              <div>
-                <label for="apiKey" class="form-label-icon"><span>🔑</span> API Key</label>
-                <input type="password" id="apiKey" placeholder="sk-..." class="form-input">
-              </div>
-
-              <div id="baseUrlGroup" style="display: none;">
-                <label for="baseUrl" class="form-label-icon"><span>🌍</span> Base URL (API 地址)</label>
-                <input type="text" id="baseUrl" placeholder="https://api.openai.com" class="form-input">
-                <p class="form-hint">例如: https://api.openai.com (不需要加 /v1/chat/completions)</p>
-              </div>
-
-              <div>
-                <label for="modelName" class="form-label-icon"><span>✨</span> 模型名称</label>
-                <input type="text" id="modelName" placeholder="gemini-1.5-flash" class="form-input">
-              </div>
-            </div>
-
-            <div class="batch-actions-section" style="margin-top: 1rem;">
-              <div id="bulkGenerateIdle" class="bulk-action-box">
-                <p class="form-hint">自动扫描所有没有描述的链接，并调用上方配置的 AI 模型生成简介。</p>
-                <button id="batchCompleteDescBtn" class="button-secondary">
-                  <span>✨</span> 一键补全所有描述
-                </button>
-              </div>
-              <div id="bulkGenerateProgress" class="bulk-action-box" style="display: none;">
-                <div class="progress-info">
-                  <span>正在生成描述...</span>
-                  <span id="progressCounter">0 / 0</span>
+            <div id="ai-settings" class="settings-tab-content">
+                <div>
+                <label class="form-label" for="providerSelector">API 提供商</label>
+                <select id="providerSelector" class="form-input" style="margin-bottom: 1rem;">
+                    <option value="workers-ai">Cloudflare Workers AI (推荐)</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI 兼容</option>
+                </select>
                 </div>
-                <div class="progress-bar-container">
-                  <div id="progressBar" class="progress-bar"></div>
+
+                <div class="form-group-stack">
+                <div>
+                    <label for="apiKey" class="form-label-icon"><span>🔑</span> API Key</label>
+                    <input type="password" id="apiKey" placeholder="sk-..." class="form-input">
                 </div>
-                <button id="stopBulkGenerateBtn" class="button-danger">
-                  <span>⏸️</span> 停止处理
-                </button>
-              </div>
+
+                <div id="baseUrlGroup" style="display: none;">
+                    <label for="baseUrl" class="form-label-icon"><span>🌍</span> Base URL (API 地址)</label>
+                    <input type="text" id="baseUrl" placeholder="https://api.openai.com" class="form-input">
+                    <p class="form-hint">例如: https://api.openai.com (不需要加 /v1/chat/completions)</p>
+                </div>
+
+                <div>
+                    <label for="modelName" class="form-label-icon"><span>✨</span> 模型名称</label>
+                    <input type="text" id="modelName" placeholder="gemini-1.5-flash" class="form-input">
+                </div>
+                </div>
+
+                <div class="batch-actions-section" style="margin-top: 1rem;">
+                <div id="bulkGenerateIdle" class="bulk-action-box">
+                    <p class="form-hint">自动扫描所有没有描述的链接，并调用上方配置的 AI 模型生成简介。</p>
+                    <button id="batchCompleteDescBtn" class="button-secondary">
+                    <span>✨</span> 一键补全所有描述
+                    </button>
+                </div>
+                <div id="bulkGenerateProgress" class="bulk-action-box" style="display: none;">
+                    <div class="progress-info">
+                    <span>正在生成描述...</span>
+                    <span id="progressCounter">0 / 0</span>
+                    </div>
+                    <div class="progress-bar-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                    <button id="stopBulkGenerateBtn" class="button-danger">
+                    <span>⏸️</span> 停止处理
+                    </button>
+                </div>
+                </div>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button id="cancelAiSettingsBtn" class="button-tertiary">取消</button>
-            <button id="saveAiSettingsBtn" class="button-primary"><span>💾</span> 保存设置</button>
+            <button id="cancelSettingsBtn" class="button-tertiary">取消</button>
+            <button id="saveSettingsBtn" class="button-primary"><span>💾</span> 保存设置</button>
           </div>
         </div>
       </div>
@@ -370,6 +504,6 @@
       </div>
     </div>
 
-    <script src="/js/admin.js?v=4"></script>
+    <script src="/js/admin.js?v=5"></script>
   </body>
 </html>

@@ -1366,23 +1366,40 @@ if (addBookmarkForm) {
 }
 
 // ===================================
-// 新版 AI 设置模态框逻辑 (Refactored)
+// 新版 设置模态框逻辑 (Settings Modal)
 // ===================================
 document.addEventListener('DOMContentLoaded', () => {
-  const aiSettingsBtn = document.getElementById('aiSettingsBtn');
-  const aiSettingsModal = document.getElementById('aiSettingsModal');
-  if (!aiSettingsBtn || !aiSettingsModal) return;
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  if (!settingsBtn || !settingsModal) return;
 
   // Modal Elements
-  const closeBtn = document.getElementById('closeAiSettingsModal');
-  const cancelBtn = document.getElementById('cancelAiSettingsBtn');
-  const saveBtn = document.getElementById('saveAiSettingsBtn');
+  const closeBtn = document.getElementById('closeSettingsModal');
+  const cancelBtn = document.getElementById('cancelSettingsBtn');
+  const saveBtn = document.getElementById('saveSettingsBtn');
 
-  // Provider Elements
+  // Tabs Elements
+  const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
+  const settingsTabContents = document.querySelectorAll('.settings-tab-content');
+
+  // Layout Inputs
+  const hideDescSwitch = document.getElementById('hideDescSwitch');
+  const hideLinksSwitch = document.getElementById('hideLinksSwitch');
+  const hideCategorySwitch = document.getElementById('hideCategorySwitch');
+  const hideTitleSwitch = document.getElementById('hideTitleSwitch');
+  const hideSubtitleSwitch = document.getElementById('hideSubtitleSwitch');
+  const gridColsRadios = document.getElementsByName('gridCols');
+  const menuLayoutRadios = document.getElementsByName('menuLayout');
+  const customWallpaperInput = document.getElementById('customWallpaperInput');
+  const randomWallpaperSwitch = document.getElementById('randomWallpaperSwitch');
+  const bingCountrySelect = document.getElementById('bingCountry');
+  const bingWallpapersDiv = document.getElementById('bingWallpapers');
+
+  // AI Provider Elements
   const providerSelector = document.getElementById('providerSelector');
   const baseUrlGroup = document.getElementById('baseUrlGroup');
 
-  // Form Inputs
+  // AI Form Inputs
   const apiKeyInput = document.getElementById('apiKey');
   const baseUrlInput = document.getElementById('baseUrl');
   const modelNameInput = document.getElementById('modelName');
@@ -1395,26 +1412,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressBar = document.getElementById('progressBar');
   const progressCounter = document.getElementById('progressCounter');
 
-  let currentAIConfig = {
+  let currentSettings = {
+    // AI Defaults
     provider: 'workers-ai',
     apiKey: '',
     baseUrl: '',
-    model: '@cf/meta/llama-3-8b-instruct'
+    model: '@cf/meta/llama-3-8b-instruct',
+    // Layout Defaults
+    layout_hide_desc: false,
+    layout_hide_links: false,
+    layout_hide_category: false,
+    layout_hide_title: false,
+    layout_hide_subtitle: false,
+    layout_grid_cols: '4',
+    layout_custom_wallpaper: '',
+    layout_menu_layout: 'vertical',
+    layout_random_wallpaper: false,
+    bing_country: ''
   };
 
   let shouldStopBulkGeneration = false;
-  let aiRequestDelay = 1500; // Default value, will be updated from config
+  let aiRequestDelay = 1500; 
+
   async function fetchPublicConfig() {
     try {
       const response = await fetch('/api/public-config');
       if (!response.ok) {
-        console.error('Failed to fetch public config, using default values.');
+        console.error('Failed to fetch public config.');
         return;
       }
       const config = await response.json();
       if (config && typeof config.aiRequestDelay === 'number') {
         aiRequestDelay = config.aiRequestDelay;
-        console.log(`AI request delay set to: ${aiRequestDelay}ms`);
       }
     } catch (error) {
       console.error('Error fetching public config:', error);
@@ -1422,12 +1451,68 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   fetchPublicConfig();
 
+  // --- Bing Wallpaper Logic ---
+  async function fetchBingWallpapers(country = '') {
+      if (!bingWallpapersDiv) return;
+      bingWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">加载中...</div>';
+      
+      try {
+          let url = '';
+          if (country === 'spotlight') {
+              url = 'https://peapix.com/spotlight/feed?n=7';
+          } else {
+              url = `https://peapix.com/bing/feed?n=7&country=${country}`;
+          }
+          
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('API Request Failed');
+          const data = await res.json();
+          
+          bingWallpapersDiv.innerHTML = '';
+          
+          if (!Array.isArray(data) || data.length === 0) {
+              bingWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">未获取到壁纸</div>';
+              return;
+          }
+          
+          data.forEach(item => {
+              // item.thumbUrl usually 480x360 or similar
+              // item.fullUrl usually 1920x1080
+              const thumb = item.thumbUrl || item.url; // Fallback
+              const full = item.fullUrl || item.url;   // Fallback
+              const title = item.title || 'Bing Wallpaper';
+              
+              const div = document.createElement('div');
+              div.className = 'relative group cursor-pointer rounded-lg overflow-hidden border border-gray-200 hover:border-primary-500 transition-all aspect-video bg-gray-100';
+              div.title = title;
+              div.innerHTML = `<img src="${thumb}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="${title}">
+                               <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                  <span class="opacity-0 group-hover:opacity-100 bg-black/50 text-white text-xs px-2 py-1 rounded">应用</span>
+                               </div>`;
+              
+              div.addEventListener('click', () => {
+                  if (customWallpaperInput) {
+                      customWallpaperInput.value = full;
+                      // Optional: Flash input to indicate change
+                      customWallpaperInput.classList.add('bg-green-50');
+                      setTimeout(() => customWallpaperInput.classList.remove('bg-green-50'), 300);
+                  }
+              });
+              
+              bingWallpapersDiv.appendChild(div);
+          });
+          
+      } catch (err) {
+          console.error('Bing Wallpaper Fetch Error:', err);
+          bingWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-red-400 py-8 text-sm">加载失败，请检查网络或稍后重试</div>';
+      }
+  }
+
   // --- Event Listeners ---
 
-  aiSettingsBtn.addEventListener('click', () => {
-    loadConfig();
-    updateUIFromConfig();
-    aiSettingsModal.style.display = 'block';
+  settingsBtn.addEventListener('click', () => {
+    loadSettings();
+    settingsModal.style.display = 'block';
   });
 
   const closeModal = () => {
@@ -1437,30 +1522,83 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       shouldStopBulkGeneration = true;
     }
-    aiSettingsModal.style.display = 'none';
+    settingsModal.style.display = 'none';
   };
   closeBtn.addEventListener('click', closeModal);
   cancelBtn.addEventListener('click', closeModal);
-  aiSettingsModal.addEventListener('click', (e) => {
-    if (e.target === aiSettingsModal) {
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
       closeModal();
     }
   });
 
+  // Tab Switching
+  settingsTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tabId = btn.getAttribute('data-tab');
+        
+        settingsTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        settingsTabContents.forEach(c => {
+            c.classList.remove('active');
+            if (c.id === tabId) {
+                c.classList.add('active');
+            }
+        });
+        
+        // Auto fetch bing wallpapers if tab is active and empty
+        if (tabId === 'wallpaper-settings' && bingWallpapersDiv && (!bingWallpapersDiv.children.length || bingWallpapersDiv.innerText.includes('加载中'))) {
+            fetchBingWallpapers(currentSettings.bing_country);
+        }
+    });
+  });
+  
+  if (bingCountrySelect) {
+      bingCountrySelect.addEventListener('change', () => {
+          currentSettings.bing_country = bingCountrySelect.value;
+          fetchBingWallpapers(currentSettings.bing_country);
+      });
+  }
+
   if (providerSelector) {
     providerSelector.addEventListener('change', () => {
-      currentAIConfig.provider = providerSelector.value;
-      updateUIFromConfig();
+      currentSettings.provider = providerSelector.value;
+      updateUIFromSettings();
     });
   }
 
   saveBtn.addEventListener('click', () => {
-    currentAIConfig.apiKey = apiKeyInput.value.trim();
-    currentAIConfig.baseUrl = baseUrlInput.value.trim();
-    currentAIConfig.model = modelNameInput.value.trim();
-    saveConfig();
-    showMessage('AI 设置已保存', 'success');
-    closeModal();
+    // Update state from inputs
+    currentSettings.apiKey = apiKeyInput.value.trim();
+    currentSettings.baseUrl = baseUrlInput.value.trim();
+    currentSettings.model = modelNameInput.value.trim();
+    currentSettings.layout_hide_desc = hideDescSwitch.checked;
+    currentSettings.layout_hide_links = hideLinksSwitch.checked;
+    currentSettings.layout_hide_category = hideCategorySwitch.checked;
+    currentSettings.layout_hide_title = hideTitleSwitch.checked;
+    currentSettings.layout_hide_subtitle = hideSubtitleSwitch.checked;
+    currentSettings.layout_custom_wallpaper = customWallpaperInput.value.trim();
+    currentSettings.layout_random_wallpaper = randomWallpaperSwitch.checked;
+    currentSettings.bing_country = bingCountrySelect.value;
+    
+    // Get Grid Cols
+    for (const radio of gridColsRadios) {
+        if (radio.checked) {
+            currentSettings.layout_grid_cols = radio.value;
+            break;
+        }
+    }
+    
+    // Get Menu Layout
+    for (const radio of menuLayoutRadios) {
+        if (radio.checked) {
+            currentSettings.layout_menu_layout = radio.value;
+            break;
+        }
+    }
+
+    saveSettings();
   });
 
   batchCompleteBtn.addEventListener('click', handleBulkGenerate);
@@ -1471,52 +1609,154 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Helper Functions ---
 
-  function loadConfig() {
-    const savedConfig = localStorage.getItem('ai_settings');
-    if (savedConfig) {
-      currentAIConfig = JSON.parse(savedConfig);
-      // Ensure provider is valid (handle legacy config)
-      if (!['gemini', 'openai', 'workers-ai'].includes(currentAIConfig.provider)) {
-        currentAIConfig.provider = 'workers-ai';
-      }
+  async function loadSettings() {
+    try {
+        // 1. Try to fetch from server (new source of truth)
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        
+        if (data.code === 200 && data.data) {
+            const serverSettings = data.data;
+            
+            // Map known keys
+            if (serverSettings.provider) currentSettings.provider = serverSettings.provider;
+            if (serverSettings.apiKey) currentSettings.apiKey = serverSettings.apiKey;
+            if (serverSettings.baseUrl) currentSettings.baseUrl = serverSettings.baseUrl;
+            if (serverSettings.model) currentSettings.model = serverSettings.model;
+            
+            if (serverSettings.layout_hide_desc !== undefined) currentSettings.layout_hide_desc = serverSettings.layout_hide_desc === 'true';
+            if (serverSettings.layout_hide_links !== undefined) currentSettings.layout_hide_links = serverSettings.layout_hide_links === 'true';
+            if (serverSettings.layout_hide_category !== undefined) currentSettings.layout_hide_category = serverSettings.layout_hide_category === 'true';
+            if (serverSettings.layout_hide_title !== undefined) currentSettings.layout_hide_title = serverSettings.layout_hide_title === 'true';
+            if (serverSettings.layout_hide_subtitle !== undefined) currentSettings.layout_hide_subtitle = serverSettings.layout_hide_subtitle === 'true';
+            if (serverSettings.layout_grid_cols) currentSettings.layout_grid_cols = serverSettings.layout_grid_cols;
+            if (serverSettings.layout_custom_wallpaper) currentSettings.layout_custom_wallpaper = serverSettings.layout_custom_wallpaper;
+            if (serverSettings.layout_menu_layout) currentSettings.layout_menu_layout = serverSettings.layout_menu_layout;
+            if (serverSettings.layout_random_wallpaper !== undefined) currentSettings.layout_random_wallpaper = serverSettings.layout_random_wallpaper === 'true';
+            if (serverSettings.bing_country !== undefined) currentSettings.bing_country = serverSettings.bing_country;
+
+        } else {
+            // Fallback to localStorage if server has no data (migration)
+            const localConfig = localStorage.getItem('ai_settings');
+            if (localConfig) {
+                const parsed = JSON.parse(localConfig);
+                currentSettings = { ...currentSettings, ...parsed };
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load settings', e);
+        // Fallback to localStorage
+        const localConfig = localStorage.getItem('ai_settings');
+        if (localConfig) {
+            const parsed = JSON.parse(localConfig);
+            currentSettings = { ...currentSettings, ...parsed };
+        }
+    }
+
+    updateUIFromSettings();
+  }
+
+  async function saveSettings() {
+    // Save to localStorage (backup/legacy)
+    localStorage.setItem('ai_settings', JSON.stringify({
+        provider: currentSettings.provider,
+        apiKey: currentSettings.apiKey,
+        baseUrl: currentSettings.baseUrl,
+        model: currentSettings.model
+    }));
+
+    // Save to Server
+    try {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span> 保存中...';
+        
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentSettings)
+        });
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            showMessage('设置已保存', 'success');
+            closeModal();
+        } else {
+            showMessage('保存失败: ' + data.message, 'error');
+        }
+    } catch (e) {
+        showMessage('保存失败 (网络错误)', 'error');
+        console.error(e);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span>💾</span> 保存设置';
     }
   }
 
-  function saveConfig() {
-    localStorage.setItem('ai_settings', JSON.stringify(currentAIConfig));
-  }
-
-  function updateUIFromConfig() {
+  function updateUIFromSettings() {
+    // AI UI
     if (providerSelector) {
-      providerSelector.value = currentAIConfig.provider;
+      providerSelector.value = currentSettings.provider || 'workers-ai';
+    }
+    const provider = currentSettings.provider || 'workers-ai';
+    apiKeyInput.value = currentSettings.apiKey || '';
+    baseUrlInput.value = currentSettings.baseUrl || '';
+    
+    // Legacy fix
+    if (!['gemini', 'openai', 'workers-ai'].includes(provider)) {
+        currentSettings.provider = 'workers-ai';
+        providerSelector.value = 'workers-ai';
     }
 
-    const provider = currentAIConfig.provider;
-    apiKeyInput.value = currentAIConfig.apiKey || '';
-    baseUrlInput.value = currentAIConfig.baseUrl || '';
-
-    // Show/Hide Inputs based on Provider
     if (provider === 'workers-ai') {
       apiKeyInput.parentElement.style.display = 'none';
       baseUrlGroup.style.display = 'none';
-      modelNameInput.parentElement.style.display = 'none'; // Configured via env var
+      modelNameInput.parentElement.style.display = 'none'; 
     } else {
       apiKeyInput.parentElement.style.display = 'block';
       modelNameInput.parentElement.style.display = 'block';
 
       if (provider === 'gemini') {
-        modelNameInput.value = currentAIConfig.model || 'gemini-1.5-flash';
+        modelNameInput.value = currentSettings.model || 'gemini-1.5-flash';
         modelNameInput.placeholder = 'gemini-1.5-flash';
         baseUrlGroup.style.display = 'none';
       } else if (provider === 'openai') {
-        modelNameInput.value = currentAIConfig.model || 'gpt-3.5-turbo';
+        modelNameInput.value = currentSettings.model || 'gpt-3.5-turbo';
         modelNameInput.placeholder = 'gpt-3.5-turbo';
         baseUrlGroup.style.display = 'block';
       }
     }
+
+    // Layout UI
+    if (hideDescSwitch) hideDescSwitch.checked = !!currentSettings.layout_hide_desc;
+    if (hideLinksSwitch) hideLinksSwitch.checked = !!currentSettings.layout_hide_links;
+    if (hideCategorySwitch) hideCategorySwitch.checked = !!currentSettings.layout_hide_category;
+    if (hideTitleSwitch) hideTitleSwitch.checked = !!currentSettings.layout_hide_title;
+    if (hideSubtitleSwitch) hideSubtitleSwitch.checked = !!currentSettings.layout_hide_subtitle;
+    if (customWallpaperInput) customWallpaperInput.value = currentSettings.layout_custom_wallpaper || '';
+    if (randomWallpaperSwitch) randomWallpaperSwitch.checked = !!currentSettings.layout_random_wallpaper;
+    if (bingCountrySelect) bingCountrySelect.value = currentSettings.bing_country || '';
+    
+    // Grid Cols
+    if (gridColsRadios) {
+        for (const radio of gridColsRadios) {
+            if (radio.value === String(currentSettings.layout_grid_cols)) {
+                radio.checked = true;
+            }
+        }
+    }
+    
+    // Menu Layout
+    if (menuLayoutRadios) {
+        for (const radio of menuLayoutRadios) {
+            if (radio.value === String(currentSettings.layout_menu_layout)) {
+                radio.checked = true;
+            }
+        }
+    }
   }
 
   // --- AI Call Logic (Frontend) ---
+  // Note: Pass currentSettings instead of trying to read from localStorage inside
   async function getAIDescription(aiConfig, bookmark, generateName = false) {
     const { provider, apiKey, baseUrl, model } = aiConfig;
     const { name, url } = bookmark;
@@ -1615,17 +1855,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Bulk Generation Logic (Refactored) ---
   async function handleBulkGenerate() {
-    currentAIConfig.apiKey = apiKeyInput.value.trim();
-    currentAIConfig.baseUrl = baseUrlInput.value.trim();
-    currentAIConfig.model = modelNameInput.value.trim();
+    currentSettings.apiKey = apiKeyInput.value.trim();
+    currentSettings.baseUrl = baseUrlInput.value.trim();
+    currentSettings.model = modelNameInput.value.trim();
 
     // Validation
-    if (currentAIConfig.provider !== 'workers-ai') {
-      if (!currentAIConfig.apiKey || !currentAIConfig.model) {
+    if (currentSettings.provider !== 'workers-ai') {
+      if (!currentSettings.apiKey || !currentSettings.model) {
         showMessage('请先配置 API Key 和模型名称', 'error');
         return;
       }
-      if (currentAIConfig.provider === 'openai' && !currentAIConfig.baseUrl) {
+      if (currentSettings.provider === 'openai' && !currentSettings.baseUrl) {
         showMessage('使用 OpenAI 兼容模式时，Base URL 是必填项', 'error');
         return;
       }
@@ -1673,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const link = linksToUpdate[i];
 
       try {
-        const { description } = await getAIDescription(currentAIConfig, link);
+        const { description } = await getAIDescription(currentSettings, link);
         const updateResponse = await fetch('/api/update-description', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1751,10 +1991,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Ensure config is loaded
-    loadConfig();
+    loadSettings();
 
     // Check if AI is configured (if not workers-ai, need key)
-    if (currentAIConfig.provider !== 'workers-ai' && !currentAIConfig.apiKey) {
+    if (currentSettings.provider !== 'workers-ai' && !currentSettings.apiKey) {
       showModalMessage(modalId, '请先在 AI 设置中配置 API Key', 'error');
       return;
     }
@@ -1769,7 +2009,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Create a temporary object to match the expected structure
       const generateName = !name;
       const bookmark = { name: name || '未命名', url: url };
-      const result = await getAIDescription(currentAIConfig, bookmark, generateName);
+      const result = await getAIDescription(currentSettings, bookmark, generateName);
 
       descInput.value = result.description;
       if (generateName && result.name) {

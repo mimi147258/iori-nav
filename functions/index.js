@@ -119,7 +119,111 @@ export async function onRequest(context) {
       })
     : sites;
 
+  // Fetch Layout Settings
+  let layoutHideDesc = false;
+  let layoutHideLinks = false;
+  let layoutHideCategory = false;
+  let layoutHideTitle = false;
+  let layoutHideSubtitle = false;
+  let layoutGridCols = '4';
+  let layoutCustomWallpaper = '';
+  let layoutMenuLayout = 'vertical';
+  let layoutRandomWallpaper = false;
+  let bingCountry = '';
+
+  try {
+    const { results } = await env.NAV_DB.prepare("SELECT key, value FROM settings WHERE key IN ('layout_hide_desc', 'layout_hide_links', 'layout_hide_category', 'layout_hide_title', 'layout_hide_subtitle', 'layout_grid_cols', 'layout_custom_wallpaper', 'layout_menu_layout', 'layout_random_wallpaper', 'bing_country')").all();
+    if (results) {
+      results.forEach(row => {
+        if (row.key === 'layout_hide_desc') layoutHideDesc = row.value === 'true';
+        if (row.key === 'layout_hide_links') layoutHideLinks = row.value === 'true';
+        if (row.key === 'layout_hide_category') layoutHideCategory = row.value === 'true';
+        if (row.key === 'layout_hide_title') layoutHideTitle = row.value === 'true';
+        if (row.key === 'layout_hide_subtitle') layoutHideSubtitle = row.value === 'true';
+        if (row.key === 'layout_grid_cols') layoutGridCols = row.value;
+        if (row.key === 'layout_custom_wallpaper') layoutCustomWallpaper = row.value;
+        if (row.key === 'layout_menu_layout') layoutMenuLayout = row.value;
+        if (row.key === 'layout_random_wallpaper') layoutRandomWallpaper = row.value === 'true';
+        if (row.key === 'bing_country') bingCountry = row.value;
+      });
+    }
+  } catch (e) {
+    // Ignore error, use defaults
+  }
+
+  // Handle Sequential/Polling Wallpaper
+  let nextWallpaperIndex = 0;
+  if (layoutRandomWallpaper) {
+      try {
+          // Parse Cookie for current index
+          const cookies = request.headers.get('Cookie') || '';
+          const match = cookies.match(/wallpaper_index=(\d+)/);
+          const currentWallpaperIndex = match ? parseInt(match[1]) : -1;
+
+          let bingUrl = '';
+          if (bingCountry === 'spotlight') {
+              bingUrl = 'https://peapix.com/spotlight/feed?n=7';
+          } else {
+              bingUrl = `https://peapix.com/bing/feed?n=7&country=${bingCountry}`;
+          }
+          
+          const res = await fetch(bingUrl);
+          if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                  // Calculate next index
+                  nextWallpaperIndex = (currentWallpaperIndex + 1) % data.length;
+                  
+                  const targetItem = data[nextWallpaperIndex];
+                  const targetUrl = targetItem.fullUrl || targetItem.url;
+                  
+                  if (targetUrl) {
+                      layoutCustomWallpaper = targetUrl;
+                  }
+              }
+          }
+      } catch (e) {
+          // Ignore fetch error, fallback to default or stored custom wallpaper
+      }
+  }
+
+  // Define Styles based on Theme (Default vs Wallpaper)
+  const isCustomWallpaper = Boolean(layoutCustomWallpaper);
+  
+  // Header Base Classes
+  let headerClass = isCustomWallpaper 
+      ? 'bg-white/80 backdrop-blur-sm border-b border-primary-100/60 shadow-sm transition-colors duration-300' 
+      : 'bg-primary-700 text-white border-b border-primary-600 shadow-sm';
+      
+  if (isCustomWallpaper && layoutMenuLayout === 'horizontal') {
+      headerClass = 'bg-transparent border-none shadow-none';
+  }
+
+  // Container Classes
+  let containerClass = isCustomWallpaper
+      ? 'rounded-2xl'
+      : 'rounded-2xl border border-primary-100/60 bg-white/80 backdrop-blur-sm shadow-sm';
+
+  // Text Colors
+  const titleColorClass = isCustomWallpaper ? 'text-gray-900' : 'text-white';
+  const subTextColorClass = isCustomWallpaper ? 'text-gray-600' : 'text-primary-100/90';
+  
+  // Horizontal Search Input Styles
+  const searchInputClass = isCustomWallpaper
+      ? 'bg-white/90 backdrop-blur border border-gray-200 text-gray-800 placeholder-gray-400 focus:ring-primary-200 focus:border-primary-400 focus:bg-white'
+      : 'bg-white/15 text-white placeholder-primary-200 focus:ring-white/30 focus:bg-white/20 border-none';
+  const searchIconClass = isCustomWallpaper ? 'text-gray-400' : 'text-primary-200';
+
+  // Horizontal Menu Link Styles
+  const hLinkActive = isCustomWallpaper 
+      ? 'bg-primary-600 text-white shadow-sm font-semibold' 
+      : 'bg-white text-primary-700 shadow-sm font-semibold';
+  const hLinkInactive = isCustomWallpaper
+      ? 'bg-white/60 text-gray-700 hover:bg-white hover:text-primary-600 backdrop-blur-sm'
+      : 'bg-primary-600/40 text-white hover:bg-primary-600/60 backdrop-blur-sm';
+
   // 4. 生成动态内容
+  // Vertical Menu Links (Sidebar)
   const catalogLinkMarkup = catalogs.map((cat) => {
     const safeCat = escapeHTML(cat);
     const encodedCat = encodeURIComponent(cat);
@@ -135,6 +239,29 @@ export async function onRequest(context) {
       </a>
     `;
   }).join('');
+  
+  // Horizontal Menu Links (Top)
+  const horizontalCatalogMarkup = catalogs.map((cat) => {
+    const safeCat = escapeHTML(cat);
+    const encodedCat = encodeURIComponent(cat);
+    const isActive = catalogExists && cat === currentCatalog;
+    const linkClass = isActive ? hLinkActive : hLinkInactive;
+    
+    return `
+      <a href="?catalog=${encodedCat}" class="menu-item inline-flex items-center px-4 py-2 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${linkClass}">
+        ${safeCat}
+      </a>
+    `;
+  }).join('');
+  
+  // Add "All" link to horizontal menu
+  const allLinkActive = !catalogExists;
+  const allLinkClass = allLinkActive ? hLinkActive : hLinkInactive;
+  const horizontalAllLink = `
+      <a href="?catalog=all" class="menu-item inline-flex items-center px-4 py-2 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${allLinkClass}">
+        全部
+      </a>
+  `;
 
   const sitesGridMarkup = currentSites.map((site) => {
     const rawName = site.name || '未命名';
@@ -154,6 +281,24 @@ export async function onRequest(context) {
     const safeDataCatalog = escapeHTML(site.catelog || '');
     const hasValidUrl = Boolean(normalizedUrl);
 
+    // Conditional HTML parts
+    const descHtml = layoutHideDesc ? '' : `<p class="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
+    const linksHtml = layoutHideLinks ? '' : `
+          <div class="mt-3 flex items-center justify-between">
+            <span class="text-xs text-primary-600 truncate max-w-[140px]" title="${safeDisplayUrl}">${safeDisplayUrl}</span>
+            <button class="copy-btn relative flex items-center px-2 py-1 ${hasValidUrl ? 'bg-accent-100 text-accent-700 hover:bg-accent-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'} rounded-full text-xs font-medium transition-colors" data-url="${dataUrlAttr}" ${hasValidUrl ? '' : 'disabled'}>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ${layoutGridCols === '5' ? '' : 'mr-1'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              ${layoutGridCols === '5' ? '' : '复制'}
+              <span class="copy-success hidden absolute -top-8 right-0 bg-accent-500 text-white text-xs px-2 py-1 rounded shadow-md">已复制!</span>
+            </button>
+          </div>`;
+    const categoryHtml = layoutHideCategory ? '' : `
+                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-secondary-100 text-primary-700">
+                  ${safeCatalog}
+                </span>`;
+
     return `
       <div class="site-card group bg-white border border-primary-100/60 rounded-xl shadow-sm overflow-hidden" data-id="${site.id}" data-name="${safeDataName}" data-url="${dataUrlAttr}" data-catalog="${safeDataCatalog}">
         <div class="p-5">
@@ -168,27 +313,22 @@ export async function onRequest(context) {
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="site-title text-base font-medium text-gray-900 truncate transition-all duration-300 origin-left" title="${safeName}">${safeName}</h3>
-                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-secondary-100 text-primary-700">
-                  ${safeCatalog}
-                </span>
+                ${categoryHtml}
               </div>
             </div>
-            <p class="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>
+            ${descHtml}
           </a>
-          <div class="mt-3 flex items-center justify-between">
-            <span class="text-xs text-primary-600 truncate max-w-[140px]" title="${safeDisplayUrl}">${safeDisplayUrl}</span>
-            <button class="copy-btn relative flex items-center px-2 py-1 ${hasValidUrl ? 'bg-accent-100 text-accent-700 hover:bg-accent-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'} rounded-full text-xs font-medium transition-colors" data-url="${dataUrlAttr}" ${hasValidUrl ? '' : 'disabled'}>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              复制
-              <span class="copy-success hidden absolute -top-8 right-0 bg-accent-500 text-white text-xs px-2 py-1 rounded shadow-md">已复制!</span>
-            </button>
-          </div>
+          ${linksHtml}
         </div>
       </div>
     `;
   }).join('');
+
+  // Generate dynamic grid class
+  let gridClass = 'grid grid-cols-1 min-[550px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6';
+  if (layoutGridCols === '5') {
+      gridClass = 'grid grid-cols-1 min-[550px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6';
+  }
 
   const datalistOptions = catalogs.map((cat) => `<option value="${escapeHTML(cat)}">`).join('');
   const headingPlainText = catalogExists
@@ -203,14 +343,137 @@ export async function onRequest(context) {
   const siteName = env.SITE_NAME || '灰色轨迹';
   const siteDescription = env.SITE_DESCRIPTION || '一个优雅、快速、易于部署的书签（网址）收藏与分享平台，完全基于 Cloudflare 全家桶构建';
   const footerText = env.FOOTER_TEXT || '曾梦想仗剑走天涯';
+  
+  // Conditional Title/Subtitle HTML
+  const mainTitleHtml = layoutHideTitle ? '' : `<h1 class="mt-4 text-3xl md:text-4xl font-semibold tracking-tight ${titleColorClass}">{{SITE_NAME}}</h1>`;
+  const subtitleHtml = layoutHideSubtitle ? '' : `<p class="mt-3 text-sm md:text-base ${subTextColorClass} leading-relaxed">{{SITE_DESCRIPTION}}</p>`;
+  
+  const horizontalTitleHtml = layoutHideTitle ? '' : `<h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-3 ${titleColorClass}">{{SITE_NAME}}</h1>`;
+  const horizontalSubtitleHtml = layoutHideSubtitle ? '' : `<p class="${subTextColorClass} opacity-90 text-sm md:text-base">{{SITE_DESCRIPTION}}</p>`;
+
+  // Define Header Contents
+  const verticalHeaderContent = `
+      <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div class="flex-1 text-center md:text-left">
+          <span class="inline-flex items-center gap-2 rounded-full bg-primary-600/70 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-secondary-200/80">
+            精选 · 真实 · 有温度
+          </span>
+          ${mainTitleHtml}
+          ${subtitleHtml}
+        </div>
+        <div class="w-full md:w-auto flex justify-center md:justify-end">
+          <div class="rounded-2xl bg-white/10 backdrop-blur-md px-6 py-5 shadow-lg border border-white/10 text-left md:text-right">
+            <p class="text-xs uppercase tracking-[0.28em] text-secondary-100/70">Current Overview</p>
+            <span class="mt-3 text-2xl font-semibold ${isCustomWallpaper ? 'text-gray-800' : 'text-white'}">{{TOTAL_SITES}}</span>
+            <span class="text-sm text-secondary-100/85">条书签 ·<span class="mt-3 text-2xl font-semibold ${isCustomWallpaper ? 'text-gray-800' : 'text-white'}"> {{CATALOG_COUNT}}</span> 个分类</span>
+            <p class="mt-2 text-xs text-secondary-100/60">每日人工维护,确保链接状态可用、内容可靠。</p>
+          </div>
+        </div>
+      </div>`;
+      
+  const horizontalHeaderContent = `
+      <div class="max-w-4xl mx-auto text-center relative z-10">
+        <div class="mb-8">
+            ${horizontalTitleHtml}
+            ${horizontalSubtitleHtml}
+        </div>
+
+        <div class="relative max-w-xl mx-auto mb-8">
+            <input id="headerSearchInput" type="text" name="search" placeholder="搜索书签..." class="search-input-target w-full pl-12 pr-4 py-3.5 rounded-2xl transition-all shadow-lg outline-none focus:outline-none focus:ring-2 ${searchInputClass}" autocomplete="off">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute left-4 top-3.5 ${searchIconClass}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        </div>
+        
+        <div class="relative max-w-5xl mx-auto">
+            <div id="horizontalCategoryNav" class="flex flex-wrap justify-center gap-3 overflow-hidden" style="max-height: 48px;">
+                ${horizontalAllLink}
+                ${horizontalCatalogMarkup}
+            </div>
+            <div id="horizontalMoreBtnContainer" class="hidden absolute right-0 top-0 h-full flex items-center justify-center pl-2">
+                 <button id="horizontalMoreBtn" class="p-2 rounded-full shadow-sm transition-colors ${hLinkInactive}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                    </svg>
+                 </button>
+            </div>
+            <!-- Dropdown Menu -->
+            <div id="horizontalMoreDropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-2 grid gap-1">
+                <!-- Dropdown items will be moved here by JS -->
+            </div>
+        </div>
+      </div>
+  `;
+
+  // Determine Layout Classes
+  let sidebarClass = '';
+  let mainClass = 'lg:ml-64';
+  let sidebarToggleClass = '';
+  let mobileToggleVisibilityClass = 'lg:hidden';
+  let githubIconHtml = '';
+  let headerContent = verticalHeaderContent;
+
+  if (layoutMenuLayout === 'horizontal') {
+      sidebarClass = 'min-[550px]:hidden'; // Visible on mobile, hidden on 550px+
+      mainClass = ''; // Full width
+      sidebarToggleClass = '!hidden'; // Toggle hidden on 550px+
+      mobileToggleVisibilityClass = 'min-[550px]:hidden';
+      
+      // GitHub Icon for Desktop (Horizontal Layout)
+      githubIconHtml = `
+      <a href="https://slink.661388.xyz/iori-nav" target="_blank" class="fixed top-4 left-4 z-50 hidden min-[550px]:flex items-center justify-center p-2 rounded-lg bg-white/80 backdrop-blur shadow-md hover:bg-white text-gray-700 hover:text-black transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+      </a>
+      `;
+
+      headerContent = `
+        <div class="min-[550px]:hidden">
+            ${verticalHeaderContent}
+        </div>
+        <div class="hidden min-[550px]:block relative">
+            ${horizontalHeaderContent}
+        </div>
+      `;
+  }
+  
+  // Construct Left Top Action HTML
+  const leftTopActionHtml = `
+  <div class="fixed top-4 left-4 z-50 ${mobileToggleVisibilityClass}">
+    <button id="sidebarToggle" class="p-2 rounded-lg bg-white shadow-md hover:bg-gray-100">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  </div>
+  ${githubIconHtml}
+  `;
+
+  // Footer & Hitokoto Styles
+  const footerClass = isCustomWallpaper
+      ? 'bg-transparent py-8 px-6 mt-12 border-none shadow-none text-black'
+      : 'bg-white py-8 px-6 mt-12 border-t border-primary-100';
+      
+  const hitokotoClass = isCustomWallpaper ? 'text-black' : 'text-gray-500';
 
   // 5. 读取 HTML 模板并替换占位符
   const templateResponse = await env.ASSETS.fetch(new URL('/index.html', request.url));
   let html = await templateResponse.text();
+  
+  // Custom Wallpaper Logic
+  const safeWallpaperUrl = sanitizeUrl(layoutCustomWallpaper);
+  if (safeWallpaperUrl) {
+      html = html.replace('<body class="bg-secondary-50 font-sans text-gray-800">', `<body class="bg-secondary-50 font-sans text-gray-800" style="background-image: url('${safeWallpaperUrl}'); background-size: cover; background-attachment: fixed; background-position: center;">`);
+  }
 
   html = html
+    .replace('{{HEADER_CONTENT}}', headerContent)
+    .replace('{{HEADER_CLASS}}', headerClass)
+    .replace('{{CONTAINER_CLASS}}', containerClass)
+    .replace('{{FOOTER_CLASS}}', footerClass)
+    .replace('{{HITOKOTO_CLASS}}', hitokotoClass)
+    .replace('{{LEFT_TOP_ACTION}}', leftTopActionHtml)
     .replace(/{{SITE_NAME}}/g, escapeHTML(siteName))
-    .replace('{{SITE_DESCRIPTION}}', escapeHTML(siteDescription))
+    .replace(/{{SITE_DESCRIPTION}}/g, escapeHTML(siteDescription))
     .replace('{{FOOTER_TEXT}}', escapeHTML(footerText))
     .replace('{{CATALOG_EXISTS}}', catalogExists ? 'true' : 'false')
     .replace('{{CATALOG_LINKS}}', catalogLinkMarkup)
@@ -222,9 +485,19 @@ export async function onRequest(context) {
     .replace('{{HEADING_DEFAULT}}', headingDefaultAttr)
     .replace('{{HEADING_ACTIVE}}', headingActiveAttr)
     .replace('{{SITES_GRID}}', sitesGridMarkup)
-    .replace('{{CURRENT_YEAR}}', new Date().getFullYear());
+    .replace('{{CURRENT_YEAR}}', new Date().getFullYear())
+    .replace('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6', gridClass)
+    .replace('{{SIDEBAR_CLASS}}', sidebarClass)
+    .replace('{{MAIN_CLASS}}', mainClass)
+    .replace('{{SIDEBAR_TOGGLE_CLASS}}', sidebarToggleClass);
 
-  return new Response(html, {
+  const response = new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
+
+  if (layoutRandomWallpaper) {
+      response.headers.append('Set-Cookie', `wallpaper_index=${nextWallpaperIndex}; Path=/; Max-Age=31536000; SameSite=Lax`);
+  }
+
+  return response;
 }
