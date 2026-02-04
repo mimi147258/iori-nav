@@ -726,6 +726,29 @@
                          <input type="range" id="frostedGlassIntensity" min="0" max="50" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
                     </div>
 
+                    <!-- ────────────────────────────── 新增部分 ────────────────────────────── -->
+
+                    <div class="p-2 hover:bg-gray-50 rounded mt-3">
+                      <label for="cardBgOpacity" class="block text-gray-700 font-medium mb-1">
+                        卡片背景透明度: <span id="cardBgOpacityValue">0.4</span>
+                      </label>
+                      <input type="range" id="cardBgOpacity" min="0" max="1" step="0.01" value="0.4" 
+                             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div class="p-2 hover:bg-gray-50 rounded">
+                      <label for="cardBorderOpacity" class="block text-gray-700 font-medium mb-1">
+                        卡片边框透明度: <span id="cardBorderOpacityValue">0.6</span>
+                      </label>
+                      <input type="range" id="cardBorderOpacity" min="0" max="1" step="0.01" value="0.6" 
+                             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-1 px-2">
+                      建议值：背景 0.2~0.5，边框 0.4~0.8。0=完全透明，1=不透明。字体/图标不受影响。
+                    </p>
+
+                    <!-- ────────────────────────────────────────────────────────────────────── -->
                     
                 </div>
             </div>
