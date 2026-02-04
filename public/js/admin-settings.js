@@ -78,6 +78,12 @@ const initSettings = () => {
   const cardDescColorInput = document.getElementById('cardDescColor');
   const cardDescColorPicker = document.getElementById('cardDescColorPicker');
 
+  // ←←←← 在这里添加下面两段 ↓↓↓↓
+  const cardBgOpacityRange = document.getElementById('cardBgOpacity');
+  const cardBgOpacityValue = document.getElementById('cardBgOpacityValue');
+  const cardBorderOpacityRange = document.getElementById('cardBorderOpacity');
+  const cardBorderOpacityValue = document.getElementById('cardBorderOpacityValue');
+  
   const homeTitleFontInput = document.getElementById('homeTitleFont');
   const homeSubtitleFontInput = document.getElementById('homeSubtitleFont');
   const homeStatsFontInput = document.getElementById('homeStatsFont');
@@ -825,6 +831,10 @@ const initSettings = () => {
     currentSettings.card_desc_size = cardDescSizeInput.value.trim();
     currentSettings.card_desc_color = cardDescColorInput.value.trim();
 
+    // ←←←← 在这里添加下面两行（放在最后面最合适）
+    currentSettings.card_background_opacity = cardBgOpacityRange ? cardBgOpacityRange.value : '0.4';
+    currentSettings.card_border_opacity = cardBorderOpacityRange ? cardBorderOpacityRange.value : '0.6';
+    
     saveSettings();
   });
 
@@ -866,6 +876,29 @@ const initSettings = () => {
       });
   }
 
+
+// ←←←← 在这里插入下面代码（放在 bgBlurIntensityRange 监听器下面最合适）
+if (cardBgOpacityRange) {
+    cardBgOpacityRange.addEventListener('input', () => {
+        if (cardBgOpacityValue) {
+            cardBgOpacityValue.textContent = cardBgOpacityRange.value;
+        }
+        // 可选：实时更新预览卡片（如果想让后台预览也看到透明度效果）
+        updatePreviewCards();  // 如果你想预览生效，可以调用
+    });
+}
+
+if (cardBorderOpacityRange) {
+    cardBorderOpacityRange.addEventListener('input', () => {
+        if (cardBorderOpacityValue) {
+            cardBorderOpacityValue.textContent = cardBorderOpacityRange.value;
+        }
+        // 同上，可选实时预览
+        updatePreviewCards();
+    });
+}
+
+  
   batchCompleteBtn.addEventListener('click', handleBulkGenerate);
   stopBulkBtn.addEventListener('click', () => {
     shouldStopBulkGeneration = true;
@@ -982,6 +1015,10 @@ const initSettings = () => {
             if (serverSettings.card_desc_font) currentSettings.card_desc_font = serverSettings.card_desc_font;
             if (serverSettings.card_desc_size) currentSettings.card_desc_size = serverSettings.card_desc_size;
             if (serverSettings.card_desc_color) currentSettings.card_desc_color = serverSettings.card_desc_color;
+
+              // ←←←← 在这里添加下面两行（放在最后面即可）
+            if (serverSettings.card_background_opacity !== undefined) currentSettings.card_background_opacity = serverSettings.card_background_opacity;
+            if (serverSettings.card_border_opacity !== undefined) currentSettings.card_border_opacity = serverSettings.card_border_opacity;
 
         }
     } catch (e) {
