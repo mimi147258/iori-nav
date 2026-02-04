@@ -890,14 +890,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-// ========== 绑定快捷键q ==========
-document.addEventListener('keydown', e => {
-  if (e.key.toUpperCase() === 'Q' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-    e.preventDefault();
-    const toggle = document.getElementById('sidebar-toggle');
-    if (toggle) toggle.checked = !toggle.checked;
-  }
-});
   
   // ========== Random Wallpaper Logic (Client-side) ==========
   (async function() {
@@ -954,5 +946,19 @@ document.addEventListener('keydown', e => {
       } catch (e) {
           console.error('Failed to fetch random wallpaper:', e);
       }
-  })();
+  })();  
+});
+
+// 绑定 Q 键切换侧边栏（最简版）
+document.addEventListener('keydown', function(e) {
+  if (e.key.toUpperCase() === 'Q' && 
+      e.target.tagName !== 'INPUT' && 
+      e.target.tagName !== 'TEXTAREA' && 
+      e.target.isContentEditable !== true) {
+    e.preventDefault();
+    const toggle = document.getElementById('sidebar-toggle');
+    if (toggle) {
+      toggle.checked = !toggle.checked;
+    }
+  }
 });
