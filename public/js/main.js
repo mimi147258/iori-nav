@@ -890,6 +890,15 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
+// ========== 绑定快捷键q ==========
+document.addEventListener('keydown', e => {
+  if (e.key.toUpperCase() === 'Q' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    const toggle = document.getElementById('sidebar-toggle');
+    if (toggle) toggle.checked = !toggle.checked;
+  }
+});
+  
   // ========== Random Wallpaper Logic (Client-side) ==========
   (async function() {
       const config = window.IORI_LAYOUT_CONFIG || {};
